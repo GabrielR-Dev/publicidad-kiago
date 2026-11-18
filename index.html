@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="es-AR" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kiago · Descubrí Buenos Aires, completá rutas y ganate salidas</title>
+  <meta name="description" content="Kiago conecta a quienes buscan qué hacer en CABA con comercios y lugares verificados. Completá rutas con check-in GPS y ganate salidas gratis. Sumate al acceso anticipado." />
+  <meta property="og:title" content="Kiago · Próximamente en Buenos Aires" />
+  <meta property="og:description" content="Descubrí lugares reales, completá rutas y ganate salidas gratis. Sumate al acceso anticipado." />
+  <meta name="theme-color" content="#FFFFFF" />
+  <link rel="icon" type="image/png" href="images/favicon.png" />
+
+  <!-- Si JS está disponible, activamos el estado inicial de las animaciones de scroll.
+       Sin JS, el contenido se ve completo igual. -->
+  <script>document.documentElement.classList.add('js');</script>
+
+  <!-- Tipografía -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS (Play CDN). Para producción, reemplazalo por el build con la CLI. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'] },
+          colors: {
+            ink:    '#1E293B',   // títulos (gris grafito)
+            mute:   '#64748B',   // textos secundarios
+            line:   '#E2E8F0',   // bordes finos
+            cloud:  '#F8FAFC',   // fondo alterno 1
+            cream:  '#F9FAFB',   // fondo alterno 2
+            mint:   { DEFAULT: '#10B981', soft: '#ECFDF5', deep: '#047857' },  // Exploradores
+            sky:    { DEFAULT: '#0EA5E9', soft: '#F0F9FF', deep: '#0369A1' }   // Dueños
+          },
+          keyframes: {
+            float: { '0%,100%': { transform: 'translateY(0)' }, '50%': { transform: 'translateY(-12px)' } }
+          },
+          animation: { float: 'float 6s ease-in-out infinite' }
+        }
+      }
+    };
+  </script>
+
+  <style type="text/tailwindcss">
+    @layer components {
+      /* ---------- Scroll reveal ---------- */
+      .js .reveal { opacity: 0; transform: translateY(24px); transition: opacity .8s ease-out, transform .8s ease-out; transition-delay: var(--d, 0ms); }
+      .js .reveal.is-visible { opacity: 1; transform: none; }
+
+      /* ---------- Marco de celular (hover: zoom interno + sombra + borde luminoso) ---------- */
+      .phone { @apply relative mx-auto w-full rounded-[2.4rem] border border-slate-200 bg-white p-[7px] shadow-sm transition-all duration-500 ease-out; }
+      .phone-screen { @apply relative aspect-[9/18] w-full overflow-hidden rounded-[1.9rem] border border-slate-100 bg-cloud; }
+      .phone-screen img { @apply h-full w-full object-cover object-top transition-transform duration-500 ease-out; }
+      .phone-notch { @apply pointer-events-none absolute left-1/2 top-2.5 z-10 h-1.5 w-14 -translate-x-1/2 rounded-full bg-slate-300/70; }
+      .zoomable:hover .phone, .zoomable:focus-visible .phone { @apply -translate-y-1 border-mint/60 shadow-xl shadow-emerald-100; }
+      .zoomable:hover .phone-screen img, .zoomable:focus-visible .phone-screen img { @apply scale-[1.03]; }
+
+      /* ---------- Marco de navegador (Portal Web) ---------- */
+      .browser { @apply w-full overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition-all duration-500 ease-out; }
+      .browser-screen { @apply relative aspect-[2.2/1] w-full overflow-hidden bg-cloud; }
+      .browser-screen img { @apply h-full w-full object-cover object-left-top transition-transform duration-500 ease-out; }
+      .zoomable:hover .browser, .zoomable:focus-visible .browser { @apply -translate-y-1 border-sky/60 shadow-xl shadow-sky-100; }
+      .zoomable:hover .browser-screen img, .zoomable:focus-visible .browser-screen img { @apply scale-[1.03]; }
+
+      /* ---------- Tarjetas ---------- */
+      .card { @apply rounded-3xl border border-line bg-white p-7 shadow-sm; }
+      .icon-circle { @apply mb-5 flex h-12 w-12 items-center justify-center rounded-full bg-mint-soft text-mint; }
+      .tab-btn { @apply relative z-10 flex-1 rounded-full px-4 py-2.5 text-sm font-semibold text-mute transition-colors duration-300 sm:flex-none sm:px-6; }
+      .tab-btn[aria-selected="true"] { @apply text-ink; }
+    }
+  </style>
+
+  <style>
+    /* Respetamos a quienes prefieren menos movimiento */
+    @media (prefers-reduced-motion: reduce) {
+      .js .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+      .animate-float { animation: none !important; }
+      html { scroll-behavior: auto !important; }
+    }
+    section[id] { scroll-margin-top: 5rem; }
+  </style>
+</head>
+
+<body class="bg-white font-sans text-ink antialiased">
+
+  <!-- =====================================================================
+       1. NAVBAR
+       ===================================================================== -->
+  <header class="fixed inset-x-0 top-0 z-50 border-b border-[#F1F5F9] bg-white/80 backdrop-blur-md">
+    <div class="mx-auto flex h-16 max-w-6xl items-center justify-between px-5">
+      <a href="#top" class="flex items-center" aria-label="Kiago, inicio">
+        <img src="images/kiago-nom.png" alt="Kiago" class="h-9 w-auto" width="98" height="36" />
+      </a>
+
+      <nav class="hidden items-center gap-8 text-sm font-medium text-mute md:flex" aria-label="Principal">
+        <a href="#como-funciona" class="transition hover:text-ink">Cómo funciona</a>
+        <a href="#vista-previa" class="transition hover:text-ink">Vista previa</a>
+        <a href="#experiencias" class="transition hover:text-ink">Exploradores vs. Dueños</a>
+      </nav>
+
+      <div class="flex items-center gap-2">
+        <a href="#acceso" class="rounded-full border border-line bg-white px-4 py-2 text-sm font-semibold text-ink shadow-sm transition hover:border-mint hover:text-mint-deep">Acceso anticipado</a>
+        <button id="menu-btn" type="button" class="flex h-10 w-10 items-center justify-center rounded-full text-mute hover:bg-cloud md:hidden" aria-label="Abrir menú" aria-expanded="false" aria-controls="mobile-menu">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+      </div>
+    </div>
+    <!-- Menú mobile -->
+    <nav id="mobile-menu" class="hidden border-t border-[#F1F5F9] bg-white/95 px-5 py-3 text-sm font-medium text-mute md:hidden" aria-label="Menú mobile">
+      <a href="#como-funciona" class="block rounded-xl px-3 py-3 hover:bg-cloud">Cómo funciona</a>
+      <a href="#vista-previa" class="block rounded-xl px-3 py-3 hover:bg-cloud">Vista previa</a>
+      <a href="#experiencias" class="block rounded-xl px-3 py-3 hover:bg-cloud">Exploradores vs. Dueños</a>
+    </nav>
+  </header>
+
+  <main id="top">
+
+    <!-- =====================================================================
+         2. HERO
+         ===================================================================== -->
+    <section id="acceso" class="relative overflow-hidden bg-white pb-16 pt-28 sm:pt-36">
+      <!-- Halos pastel muy suaves (decorativos) -->
+      <div class="pointer-events-none absolute -top-24 left-1/2 h-80 w-[36rem] -translate-x-1/2 rounded-full bg-mint-soft opacity-70 blur-3xl" aria-hidden="true"></div>
+      <div class="pointer-events-none absolute right-[-6rem] top-72 h-72 w-72 rounded-full bg-sky-soft opacity-80 blur-3xl" aria-hidden="true"></div>
+
+      <div class="relative mx-auto max-w-3xl px-5 text-center">
+        <span class="reveal inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-mint-soft px-3.5 py-1.5 text-xs font-semibold text-mint-deep">
+          <span class="h-1.5 w-1.5 rounded-full bg-mint"></span> Próximamente en Buenos Aires
+        </span>
+
+        <h1 class="reveal mt-6 text-4xl font-extrabold leading-[1.08] tracking-tight sm:text-6xl" style="--d:80ms">
+          Descubrí Buenos Aires, completá rutas y <span class="text-mint">ganate salidas gratis</span>
+        </h1>
+
+        <p class="reveal mx-auto mt-5 max-w-xl text-base leading-relaxed text-mute sm:text-lg" style="--d:160ms">
+          Kiago reúne en un solo lugar comercios y lugares verificados de CABA para que dejes de abrir mil pestañas y sepas adónde salir, ahora.
+        </p>
+
+        <!-- Formulario (se genera desde el <template id="signup-tpl"> de más abajo) -->
+        <div class="reveal mx-auto mt-9 max-w-xl" style="--d:240ms" data-signup="hero"></div>
+      </div>
+
+      <!-- Mockup principal con flotación -->
+      <div class="reveal relative mx-auto mt-14 w-[250px] sm:w-[290px]" style="--d:320ms">
+        <div class="animate-float">
+          <button type="button" class="zoomable block w-full cursor-zoom-in rounded-[2.4rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-mint/50"
+                  data-lb="hero" data-caption="Explorá lugares verificados cerca tuyo">
+            <div class="phone shadow-2xl shadow-slate-200/70">
+              <div class="phone-notch"></div>
+              <div class="phone-screen">
+                <!-- 👉 REEMPLAZÁ ESTA IMAGEN: captura principal del Hero (app móvil) -->
+                <img src="images/app-mapa-hero.png" alt="Mapa de Kiago con un lugar verificado cerca del usuario" width="422" height="660" fetchpriority="high" />
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =====================================================================
+         3. ¿QUÉ OFRECE KIAGO Y CÓMO SE MANEJA?
+         ===================================================================== -->
+    <section id="como-funciona" class="bg-cloud py-20 sm:py-28">
+      <div class="mx-auto max-w-6xl px-5">
+        <div class="reveal mx-auto max-w-2xl text-center">
+          <p class="text-sm font-semibold text-mint">Cómo funciona</p>
+          <h2 class="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Una sola app para decidir adónde salir</h2>
+          <p class="mt-4 text-mute">Tres ideas simples que hacen que lo que ves en Kiago sea real, cercano y confiable.</p>
+        </div>
+
+        <div class="mt-14 grid gap-6 md:grid-cols-3">
+          <!-- Pilar 1 -->
+          <article class="reveal card" style="--d:0ms">
+            <div class="icon-circle">
+              <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 4.500 6v5.500c0 4.400 3.200 8 7.500 9.500 4.300-1.500 7.500-5.100 7.500-9.500V6L12 3Z"/><path d="m9 12 2 2 4-4"/></svg>
+            </div>
+            <h3 class="text-lg font-bold">Catálogo 100% curado</h3>
+            <p class="mt-2 text-sm leading-relaxed text-mute">Un equipo de moderación revisa y aprueba a mano cada comercio y lugar antes de publicarlo. Sin spam y sin locales cerrados.</p>
+          </article>
+          <!-- Pilar 2 -->
+          <article class="reveal card" style="--d:100ms">
+            <div class="icon-circle">
+              <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.200" fill="currentColor"/></svg>
+            </div>
+            <h3 class="text-lg font-bold">Mapa por cercanía en tiempo real</h3>
+            <p class="mt-2 text-sm leading-relaxed text-mute">Elegí un radio en metros y descubrí al instante qué tenés alrededor, estés donde estés en la ciudad.</p>
+          </article>
+          <!-- Pilar 3 -->
+          <article class="reveal card" style="--d:200ms">
+            <div class="icon-circle">
+              <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.200-7-11.500A7 7 0 0 1 19 9.500C19 14.800 12 21 12 21Z"/><path d="m9.500 9.500 1.700 1.700 3.300-3.400"/></svg>
+            </div>
+            <h3 class="text-lg font-bold">Check-in GPS verificado</h3>
+            <p class="mt-2 text-sm leading-relaxed text-mute">Validamos por GPS, a menos de 250 m, que realmente estuviste en el lugar antes de dejarte registrar la visita, calificar o sumar puntos.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =====================================================================
+         4. GALERÍA POR ROLES (App Móvil / Portal Web)
+         ===================================================================== -->
+    <section id="vista-previa" class="bg-white py-20 sm:py-28">
+      <div class="mx-auto max-w-6xl px-5">
+        <div class="reveal mx-auto max-w-2xl text-center">
+          <p class="text-sm font-semibold text-mint">Vista previa</p>
+          <h2 class="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Conocé la plataforma por dentro</h2>
+          <p class="mt-4 text-mute">Dos productos independientes. Elegí cuál querés ver.</p>
+        </div>
+
+        <!-- Tab switcher -->
+        <div class="reveal mt-10 flex justify-center" style="--d:100ms">
+          <div id="tablist" role="tablist" aria-label="Elegí la plataforma" class="relative flex w-full max-w-md rounded-full border border-line bg-cloud p-1 sm:w-auto">
+            <!-- Indicador deslizante -->
+            <span id="tab-pill" class="absolute bottom-1 left-1 top-1 rounded-full border border-line bg-white shadow-sm transition-all duration-300 ease-out" aria-hidden="true"></span>
+            <button role="tab" id="tab-app" aria-selected="true" aria-controls="panel-app" class="tab-btn">App Móvil · Exploradores</button>
+            <button role="tab" id="tab-web" aria-selected="false" aria-controls="panel-web" tabindex="-1" class="tab-btn">Portal Web · Dueños</button>
+          </div>
+        </div>
+
+        <!-- ================= PANEL 1: APP MÓVIL (solo turista) ================= -->
+        <div id="panel-app" role="tabpanel" aria-labelledby="tab-app" class="mt-12">
+          <div class="mx-auto grid max-w-4xl grid-cols-3 items-start gap-3 sm:gap-8">
+
+            <figure class="reveal" style="--d:0ms">
+              <button type="button" class="zoomable block w-full cursor-zoom-in rounded-[2.4rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-mint/50"
+                      data-lb="app" data-caption="Mapa por radio — elegí cuántos metros querés explorar">
+                <div class="phone"><div class="phone-notch"></div><div class="phone-screen">
+                  <!-- 👉 REEMPLAZÁ: captura 1 de la app móvil (Mapa por radio) -->
+                  <img src="images/screen-1.png" alt="Mapa por radio en la app de Kiago" loading="lazy" />
+                </div></div>
+              </button>
+              <figcaption class="mt-4 text-center">
+                <p class="text-sm font-bold sm:text-base">Mapa por radio</p>
+                <p class="mt-1 hidden text-xs text-mute sm:block">Descubrí lo que hay cerca, en metros.</p>
+              </figcaption>
+            </figure>
+
+            <figure class="reveal mt-6 sm:mt-10" style="--d:120ms">
+              <button type="button" class="zoomable block w-full cursor-zoom-in rounded-[2.4rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-mint/50"
+                      data-lb="app" data-caption="Rutas con premios — completá paradas con check-in GPS">
+                <div class="phone"><div class="phone-notch"></div><div class="phone-screen">
+                  <!-- 👉 REEMPLAZÁ: captura 2 de la app móvil (Rutas con premios) -->
+                  <img src="images/screen-2.png" alt="Ruta recomendada con paradas en la app de Kiago" loading="lazy" />
+                </div></div>
+              </button>
+              <figcaption class="mt-4 text-center">
+                <p class="text-sm font-bold sm:text-base">Rutas con premios</p>
+                <p class="mt-1 hidden text-xs text-mute sm:block">Completá paradas y ganate una salida.</p>
+              </figcaption>
+            </figure>
+
+            <figure class="reveal" style="--d:240ms">
+              <button type="button" class="zoomable block w-full cursor-zoom-in rounded-[2.4rem] focus:outline-none focus-visible:ring-2 focus-visible:ring-mint/50"
+                      data-lb="app" data-caption="Reseñas en 4 ejes y agenda — guardá favoritos y armá tus salidas">
+                <div class="phone"><div class="phone-notch"></div><div class="phone-screen">
+                  <!-- 👉 REEMPLAZÁ: captura 3 de la app móvil (Reseñas en 4 ejes y Agenda) -->
+                  <img src="images/screen-3.png" alt="Pantalla de inicio de Kiago con sugerencias y filtros" loading="lazy" />
+                </div></div>
+              </button>
+              <figcaption class="mt-4 text-center">
+                <p class="text-sm font-bold sm:text-base">Reseñas en 4 ejes y agenda</p>
+                <p class="mt-1 hidden text-xs text-mute sm:block">Calificaciones verificadas y tus planes.</p>
+              </figcaption>
+            </figure>
+          </div>
+        </div>
+
+        <!-- ================= PANEL 2: PORTAL WEB (solo dueños) ================= -->
+        <div id="panel-web" role="tabpanel" aria-labelledby="tab-web" class="mt-12" hidden>
+          <figure class="mx-auto max-w-4xl">
+            <button type="button" class="zoomable block w-full cursor-zoom-in rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky/50"
+                    data-lb="web" data-caption="Panel de autogestión — promociones, Eventos Flash y métricas de tu local">
+              <div class="browser">
+                <!-- Barra de ventana de navegador -->
+                <div class="flex items-center gap-2 border-b border-line bg-cream px-4 py-3">
+                  <span class="h-2.5 w-2.5 rounded-full bg-slate-200"></span>
+                  <span class="h-2.5 w-2.5 rounded-full bg-slate-200"></span>
+                  <span class="h-2.5 w-2.5 rounded-full bg-slate-200"></span>
+                  <span class="ml-3 flex-1 truncate rounded-full border border-line bg-white px-4 py-1 text-left text-xs text-mute">Portal de dueños · Kiago</span>
+                </div>
+                <div class="browser-screen">
+                  <!-- 👉 REEMPLAZÁ: captura del portal web del dueño -->
+                  <img src="images/owner-dashboard.png" alt="Panel de control para dueños de comercios en Kiago" loading="lazy" />
+                </div>
+              </div>
+            </button>
+            <figcaption class="mt-6 text-center">
+              <p class="text-base font-bold">Panel de autogestión</p>
+              <p class="mx-auto mt-1 max-w-md text-sm text-mute">Promociones, Eventos Flash y métricas de tu comercio, todo en un solo lugar. <strong class="font-semibold text-sky-deep">Sumate al acceso anticipado y publicá tu local gratis.</strong></p>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =====================================================================
+         5. DOS EXPERIENCIAS A MEDIDA
+         ===================================================================== -->
+    <section id="experiencias" class="bg-cream py-20 sm:py-28">
+      <div class="mx-auto max-w-6xl px-5">
+        <div class="reveal mx-auto max-w-2xl text-center">
+          <p class="text-sm font-semibold text-mint">Exploradores vs. Dueños</p>
+          <h2 class="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Dos experiencias diseñadas a medida</h2>
+          <p class="mt-4 text-mute">Cada perfil tiene su propia plataforma, con herramientas pensadas solo para lo que necesita.</p>
+        </div>
+
+        <div class="mt-14 grid gap-6 lg:grid-cols-2">
+
+          <!-- ============ BLOQUE EXPLORADOR / TURISTA ============ -->
+          <article class="reveal card p-8 sm:p-10" style="--d:0ms">
+            <span class="inline-flex items-center gap-2 rounded-full bg-mint-soft px-3.5 py-1.5 text-xs font-semibold text-mint-deep">
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.500" width="10" height="19" rx="2.500"/><path d="M11 18.500h2"/></svg>
+              App Móvil · Exploradores y Turistas
+            </span>
+            <h3 class="mt-5 text-2xl font-extrabold tracking-tight">Salí más, pagá menos</h3>
+            <p class="mt-2 text-sm text-mute">Qué hacés y qué ganás con Kiago.</p>
+
+            <ul class="mt-8 space-y-6">
+              <li class="flex gap-4">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mint-soft text-mint">
+                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13M19 12v9H5v-9"/><path d="M7.500 8a2.500 2.500 0 0 1 0-5C11 3 12 8 12 8s1-5 4.500-5a2.500 2.500 0 0 1 0 5"/></svg>
+                </span>
+                <div>
+                  <h4 class="font-bold">Rutas guiadas con premios</h4>
+                  <p class="mt-1 text-sm leading-relaxed text-mute">Completá recorridos temáticos validando tus paradas con check-in GPS y ganate una salida o consumición gratis.</p>
+                </div>
+              </li>
+              <li class="flex gap-4">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mint-soft text-mint">
+                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.200-7-11.500A7 7 0 0 1 19 9.500C19 14.800 12 21 12 21Z"/><path d="M12 7v5M9.500 9.500h5"/></svg>
+                </span>
+                <div>
+                  <h4 class="font-bold">Beneficios por aportar a la comunidad</h4>
+                  <p class="mt-1 text-sm leading-relaxed text-mute">Publicá lugares públicos o de interés general (plazas, miradores, arte urbano) y desbloqueá descuentos y beneficios exclusivos al sumar aportes aprobados.</p>
+                </div>
+              </li>
+              <li class="flex gap-4">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mint-soft text-mint">
+                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3.500" y="5" width="17" height="15.500" rx="2.500"/><path d="M8 3v4M16 3v4M3.500 10h17"/></svg>
+                </span>
+                <div>
+                  <h4 class="font-bold">Exploración inteligente y agenda</h4>
+                  <p class="mt-1 text-sm leading-relaxed text-mute">Filtrá por 11 categorías y radio en metros, mirá calificaciones verificadas en 4 ejes (precio/calidad, accesibilidad, experiencia y calidad general), guardá favoritos, armá tu agenda y aprovechá Eventos Flash.</p>
+                </div>
+              </li>
+            </ul>
+          </article>
+
+          <!-- ============ BLOQUE DUEÑO DE LOCAL ============ -->
+          <article class="reveal card p-8 sm:p-10" style="--d:120ms">
+            <span class="inline-flex items-center gap-2 rounded-full bg-sky-soft px-3.5 py-1.5 text-xs font-semibold text-sky-deep">
+              <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M8 21h8M12 18v3"/></svg>
+              Portal Web · Dueños de Comercios
+            </span>
+            <h3 class="mt-5 text-2xl font-extrabold tracking-tight">Hacé crecer tu local</h3>
+            <p class="mt-2 text-sm text-mute">Qué hacés y cómo crecés con Kiago.</p>
+
+            <ul class="mt-8 space-y-6">
+              <li class="flex gap-4">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-soft text-sky">
+                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.500 5.500 4h13L20 9.500"/><path d="M4 9.500a2.700 2.700 0 0 0 5.300 0 2.700 2.700 0 0 0 5.400 0 2.700 2.700 0 0 0 5.300 0V20H4V9.500Z"/><path d="M10 20v-5h4v5"/></svg>
+                </span>
+                <div>
+                  <h4 class="font-bold">Portal web propio de autogestión</h4>
+                  <p class="mt-1 text-sm leading-relaxed text-mute">Administrá fotos, ubicación exacta, horarios y categoría de tu local con publicación curada.</p>
+                </div>
+              </li>
+              <li class="flex gap-4">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-soft text-sky">
+                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4.500 13.500H12L11 22l8.500-11.500H12L13 2Z"/></svg>
+                </span>
+                <div>
+                  <h4 class="font-bold">Promociones y Eventos Flash</h4>
+                  <p class="mt-1 text-sm leading-relaxed text-mute">Publicá promociones directas al instante y lanzá campañas temporales (Eventos Flash) para atraer público en fechas clave.</p>
+                </div>
+              </li>
+              <li class="flex gap-4">
+                <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sky-soft text-sky">
+                  <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+                </span>
+                <div>
+                  <h4 class="font-bold">Tráfico real y métricas verificadas</h4>
+                  <p class="mt-1 text-sm leading-relaxed text-mute">Recibí visitas orgánicas de usuarios cercanos y de quienes completan rutas, y medí el rendimiento real de tu comercio.</p>
+                </div>
+              </li>
+            </ul>
+            <p class="mt-8 rounded-2xl bg-sky-soft px-5 py-4 text-sm font-semibold text-sky-deep">🎁 Acceso anticipado: sumá tu local y publicá gratis.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =====================================================================
+         6. DOS FORMAS DE VIVIR KIAGO
+         ===================================================================== -->
+    <section id="formas-de-vivir" class="bg-white py-20 sm:py-28">
+      <div class="mx-auto max-w-6xl px-5">
+        <div class="reveal mx-auto max-w-2xl text-center">
+          <p class="text-sm font-semibold text-mint">Dos perfiles, una plataforma</p>
+          <h2 class="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">Dos formas de vivir Kiago</h2>
+          <p class="mt-4 text-mute">Una sola plataforma, dos experiencias: la del que explora y la del que recibe.</p>
+        </div>
+
+        <div class="mt-14 grid gap-6 lg:grid-cols-2">
+
+          <!-- ============ CARD TURISTA ============ -->
+          <article class="reveal card flex flex-col p-8 sm:p-10" style="--d:0ms">
+            <div class="icon-circle !mb-0 text-2xl" aria-hidden="true">🧳</div>
+            <h3 class="mt-5 text-2xl font-extrabold tracking-tight">¿Sos turista? Explorá, viví y ganá</h3>
+            <p class="mt-2 text-sm text-mute">Descubrí lugares cerca de vos en el mapa y aprovechá promociones exclusivas de comercios locales.</p>
+
+            <ul class="mt-8 flex-1 space-y-4">
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">🗺️</span>
+                <p class="text-sm leading-relaxed text-mute"><strong class="font-bold text-ink">Mapa de lugares cercanos:</strong> gastronomía, hospedajes, bares, cultura y más</p>
+              </li>
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">📍</span>
+                <p class="text-sm leading-relaxed text-mute"><strong class="font-bold text-ink">Visitas validadas por GPS:</strong> registrá tu recorrido</p>
+              </li>
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">⭐</span>
+                <p class="text-sm leading-relaxed text-mute"><strong class="font-bold text-ink">Calificaciones reales:</strong> precio, accesibilidad y experiencia en 4 ejes</p>
+              </li>
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">❤️</span>
+                <p class="text-sm leading-relaxed text-mute"><strong class="font-bold text-ink">Favoritos:</strong> guardá lo que no querés perderte</p>
+              </li>
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">💬</span>
+                <p class="text-sm leading-relaxed text-mute"><strong class="font-bold text-ink">Comunidad real:</strong> comentarios y opiniones de viajeros</p>
+              </li>
+            </ul>
+
+            <p class="mt-8 rounded-2xl bg-mint-soft px-5 py-4 text-sm font-semibold text-mint-deep">Gratis, simple y hecho para viajar como un local.</p>
+            <a href="#acceso-final" class="mt-5 inline-flex items-center justify-center rounded-full bg-mint px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-600 active:scale-[.98]">Crear mi cuenta gratis</a>
+          </article>
+
+          <!-- ============ CARD DUEÑO ============ -->
+          <article class="reveal card flex flex-col p-8 sm:p-10" style="--d:120ms">
+            <div class="icon-circle !mb-0 bg-sky-soft text-sky text-2xl" aria-hidden="true">🏪</div>
+            <h3 class="mt-5 text-2xl font-extrabold tracking-tight">¿Tenés un negocio? Hacé que te encuentren</h3>
+            <p class="mt-2 text-sm text-mute">Publicá tu comercio y poné tu marca frente a miles de turistas que buscan exactamente lo que ofrecés.</p>
+
+            <ul class="mt-8 flex-1 space-y-4">
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">🏢</span>
+                <p class="text-sm leading-relaxed text-mute"><strong class="font-bold text-ink">Tu lugar publicado y verificado,</strong> con ubicación en el mapa</p>
+              </li>
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">🎯</span>
+                <p class="text-sm leading-relaxed text-mute"><strong class="font-bold text-ink">Módulos especiales por rubro:</strong> gastronomía, hospedaje, entretenimiento y más</p>
+              </li>
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">🎁</span>
+                <p class="text-sm leading-relaxed text-mute"><strong class="font-bold text-ink">Promociones propias:</strong> crealas, activalas y pausalas cuando quieras</p>
+              </li>
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">💬</span>
+                <p class="text-sm leading-relaxed text-mute"><strong class="font-bold text-ink">Dialogá con tus clientes</strong> respondiendo comentarios</p>
+              </li>
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">✅</span>
+                <p class="text-sm leading-relaxed text-mute"><strong class="font-bold text-ink">Sello de verificación:</strong> confianza instantánea</p>
+              </li>
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">📊</span>
+                <p class="text-sm leading-relaxed text-mute"><strong class="font-bold text-ink">Panel simple:</strong> gestioná todo desde un dashboard claro</p>
+              </li>
+            </ul>
+
+            <p class="mt-8 rounded-2xl bg-sky-soft px-5 py-4 text-sm font-semibold text-sky-deep">🎁 Con el acceso anticipado publicás gratis: un plan, un lugar, visibilidad total.</p>
+            <a href="#acceso-final" class="mt-5 inline-flex items-center justify-center rounded-full bg-sky px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-sky-deep active:scale-[.98]">Publicar mi negocio</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =====================================================================
+         7. EVENTOS FLASH
+         ===================================================================== -->
+    <section id="eventos-flash" class="relative overflow-hidden bg-ink py-20 text-white sm:py-28">
+      <!-- Halos decorativos -->
+      <div class="pointer-events-none absolute -top-24 left-1/4 h-80 w-80 rounded-full bg-amber-400/20 blur-3xl" aria-hidden="true"></div>
+      <div class="pointer-events-none absolute bottom-0 right-0 h-72 w-72 rounded-full bg-mint/20 blur-3xl" aria-hidden="true"></div>
+
+      <div class="relative mx-auto max-w-6xl px-5">
+        <div class="reveal mx-auto max-w-2xl text-center">
+          <p class="text-sm font-semibold text-amber-400">Por tiempo limitado</p>
+          <h2 class="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">⚡ Eventos Flash: la adrenalina de lo momentáneo</h2>
+          <p class="mt-4 text-slate-300">Promociones y actividades por tiempo limitado. Cuando termina, termina.</p>
+        </div>
+
+        <div class="mt-14 grid gap-6 lg:grid-cols-2">
+
+          <!-- Columna turista -->
+          <article class="reveal rounded-3xl border border-white/10 bg-white/5 p-8 sm:p-10" style="--d:0ms">
+            <h3 class="flex items-center gap-3 text-xl font-extrabold tracking-tight sm:text-2xl">
+              <span class="text-2xl" aria-hidden="true">🧳</span> Para el turista
+            </h3>
+            <ul class="mt-7 space-y-4">
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">🔥</span>
+                <p class="text-sm leading-relaxed text-slate-300"><strong class="font-bold text-white">Ofertas que no esperan:</strong> descuentos y experiencias únicas con fecha de cierre real</p>
+              </li>
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">🏙️</span>
+                <p class="text-sm leading-relaxed text-slate-300"><strong class="font-bold text-white">La agenda secreta de tu destino:</strong> eventos que no figuran en las guías</p>
+              </li>
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">📲</span>
+                <p class="text-sm leading-relaxed text-slate-300"><strong class="font-bold text-white">Contacto directo con el organizador</strong> para reservar al instante</p>
+              </li>
+            </ul>
+            <a href="#acceso-final" class="mt-9 inline-flex items-center justify-center rounded-full bg-mint px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-600 active:scale-[.98]">No te pierdas el próximo Evento Flash</a>
+          </article>
+
+          <!-- Columna dueño -->
+          <article class="reveal rounded-3xl border border-white/10 bg-white/5 p-8 sm:p-10" style="--d:120ms">
+            <h3 class="flex items-center gap-3 text-xl font-extrabold tracking-tight sm:text-2xl">
+              <span class="text-2xl" aria-hidden="true">🏪</span> Para el dueño
+            </h3>
+            <ul class="mt-7 space-y-4">
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">🚀</span>
+                <p class="text-sm leading-relaxed text-slate-300"><strong class="font-bold text-white">Impacto inmediato:</strong> la campaña ideal para lanzar, llenar un día débil o destacar en temporada</p>
+              </li>
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">⏱️</span>
+                <p class="text-sm leading-relaxed text-slate-300"><strong class="font-bold text-white">Vos controlás el timing:</strong> definís fechas de inicio y fin (hasta 90 días)</p>
+              </li>
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">🖼️</span>
+                <p class="text-sm leading-relaxed text-slate-300"><strong class="font-bold text-white">Página de evento a medida:</strong> título, descripción, imagen, ubicación y contacto</p>
+              </li>
+              <li class="flex gap-3">
+                <span class="shrink-0 text-lg" aria-hidden="true">✔️</span>
+                <p class="text-sm leading-relaxed text-slate-300"><strong class="font-bold text-white">Pago seguro:</strong> por transferencia, con revisión humana del comprobante</p>
+              </li>
+            </ul>
+            <a href="#acceso-final" class="mt-9 inline-flex items-center justify-center rounded-full bg-sky px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-sky-deep active:scale-[.98]">Lanzá tu Evento Flash</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- =====================================================================
+         8. CIERRE (CTA)
+         ===================================================================== -->
+    <section id="acceso-final" class="border-t border-line bg-cloud py-20 sm:py-28">
+      <div class="mx-auto max-w-2xl px-5 text-center">
+        <h2 class="reveal text-3xl font-extrabold tracking-tight sm:text-4xl">Sumate antes del lanzamiento en CABA</h2>
+        <p class="reveal mt-4 text-mute" style="--d:80ms">Dejá tu mail y te avisamos apenas Kiago esté disponible. Sin spam, solo el aviso del lanzamiento.</p>
+        <div class="reveal mx-auto mt-9 max-w-xl" style="--d:160ms" data-signup="cta"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-line bg-white py-10">
+    <div class="flex flex-col items-center gap-3 px-5 text-center">
+      <img src="images/kiago-nom.png" alt="Kiago" class="h-8 w-auto" width="87" height="32" loading="lazy" />
+      <p class="text-sm text-mute">Buenos Aires, Argentina · © 2026</p>
+    </div>
+  </footer>
+
+
+  <!-- =====================================================================
+       TEMPLATE DEL FORMULARIO (se clona en el Hero y en el Cierre)
+       ===================================================================== -->
+  <template id="signup-tpl">
+    <form novalidate class="text-left">
+      <!-- Selector de perfil -->
+      <fieldset class="mb-3">
+        <legend class="sr-only">¿Cuál es tu perfil?</legend>
+        <div class="flex flex-col gap-2 sm:flex-row sm:justify-center">
+          <label class="cursor-pointer">
+            <input type="radio" name="role" value="explorador" class="peer sr-only" checked />
+            <span class="flex items-center justify-center gap-2 rounded-full border border-line bg-white px-4 py-2.5 text-sm font-semibold text-mute transition peer-checked:border-mint peer-checked:bg-mint-soft peer-checked:text-mint-deep peer-focus-visible:ring-2 peer-focus-visible:ring-mint/40">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="m15.500 8.500-2 5-5 2 2-5 5-2Z"/></svg>
+              Soy Explorador / Turista
+            </span>
+          </label>
+          <label class="cursor-pointer">
+            <input type="radio" name="role" value="dueno" class="peer sr-only" />
+            <span class="flex items-center justify-center gap-2 rounded-full border border-line bg-white px-4 py-2.5 text-sm font-semibold text-mute transition peer-checked:border-sky peer-checked:bg-sky-soft peer-checked:text-sky-deep peer-focus-visible:ring-2 peer-focus-visible:ring-sky/40">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9.500 5.500 4h13L20 9.500"/><path d="M4 9.500a2.700 2.700 0 0 0 5.300 0 2.700 2.700 0 0 0 5.400 0 2.700 2.700 0 0 0 5.300 0V20H4V9.500Z"/></svg>
+              Soy Dueño de un local
+            </span>
+          </label>
+        </div>
+      </fieldset>
+
+      <!-- Barra píldora: email + botón -->
+      <div class="flex flex-col gap-2 rounded-3xl border border-line bg-white p-2 shadow-sm transition focus-within:border-mint focus-within:ring-4 focus-within:ring-emerald-100 sm:flex-row sm:rounded-full">
+        <label class="sr-only" data-email-label>Tu correo electrónico</label>
+        <input type="email" name="email" inputmode="email" autocomplete="email" placeholder="tu@email.com" required
+               class="min-w-0 flex-1 rounded-full bg-transparent px-5 py-3 text-base text-ink placeholder:text-slate-400 focus:outline-none" />
+        <button type="submit" class="rounded-full bg-mint px-6 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-600 active:scale-[.98]">
+          Avisame cuando salga
+        </button>
+      </div>
+      <p class="mt-2 hidden px-4 text-center text-sm text-rose-500" role="alert" data-error></p>
+    </form>
+
+    <!-- Confirmación (tono verde pastel) -->
+    <div class="hidden rounded-3xl border border-emerald-200 bg-mint-soft px-6 py-5 text-center" role="status" data-success>
+      <span class="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-white text-mint">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.200" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.500 4.500 4.500L19 7.500"/></svg>
+      </span>
+      <p class="font-bold text-mint-deep">¡Listo! Ya estás en la lista de acceso anticipado de Kiago</p>
+      <p class="mt-1 text-sm text-emerald-700" data-success-sub></p>
+    </div>
+  </template>
+
+
+  <!-- =====================================================================
+       LIGHTBOX (modal claro, fondo blanco translúcido + blur)
+       ===================================================================== -->
+  <div id="lightbox" class="pointer-events-none fixed inset-0 z-[100] flex items-center justify-center bg-white/80 opacity-0 backdrop-blur-md transition-opacity duration-300" role="dialog" aria-modal="true" aria-label="Visor de imágenes" aria-hidden="true">
+    <button id="lb-close" type="button" class="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full border border-line bg-white text-ink shadow-sm transition hover:border-mint" aria-label="Cerrar (Esc)">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+    <button id="lb-prev" type="button" class="absolute left-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-white text-ink shadow-sm transition hover:border-mint sm:left-8" aria-label="Anterior">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5-7 7 7 7"/></svg>
+    </button>
+    <button id="lb-next" type="button" class="absolute right-3 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-white text-ink shadow-sm transition hover:border-mint sm:right-8" aria-label="Siguiente">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 5 7 7-7 7"/></svg>
+    </button>
+    <figure class="flex max-h-full max-w-5xl flex-col items-center px-16 py-16 sm:px-24" data-lb-stage>
+      <img id="lb-img" src="" alt="" class="max-h-[72vh] w-auto max-w-full rounded-2xl border border-line bg-white object-contain shadow-xl transition-all duration-300" />
+      <figcaption class="mt-5 text-center">
+        <p id="lb-caption" class="text-sm font-semibold text-ink sm:text-base"></p>
+        <p id="lb-count" class="mt-1 text-xs text-mute"></p>
+      </figcaption>
+    </figure>
+  </div>
+
+
+  <!-- =====================================================================
+       BOTÓN DE CONTACTO FLOTANTE (copia el email al portapapeles)
+       ===================================================================== -->
+  <div class="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-3">
+    <!-- Toast de confirmación -->
+    <div id="contact-toast" class="pointer-events-none flex translate-y-2 items-center gap-3 rounded-2xl border border-emerald-200 bg-white px-4 py-3 opacity-0 shadow-lg transition-all duration-300" role="status" aria-live="polite">
+      <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-mint-soft text-mint">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+      </span>
+      <span>
+        <span class="block text-sm font-bold text-ink">¡Email copiado!</span>
+        <span class="block text-xs text-mute">Pegalo en tu correo para escribirnos</span>
+      </span>
+    </div>
+
+    <!-- Botón -->
+    <button id="contact-btn" type="button"
+            class="group flex h-14 items-center gap-2.5 rounded-full bg-mint pl-4 pr-5 text-white shadow-lg shadow-emerald-200 transition-all duration-300 hover:-translate-y-0.5 hover:bg-emerald-600 hover:shadow-xl active:scale-[.97] focus:outline-none focus-visible:ring-2 focus-visible:ring-mint/50"
+            aria-label="Contacto: copiar email de soporte">
+      <svg class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="m3.5 7 8.5 6 8.5-6"/></svg>
+      <span class="text-sm font-bold">Contacto</span>
+    </button>
+  </div>
+
+
+  <script>
+  (function () {
+    'use strict';
+
+    /* ============================================================
+       CONFIG — Suscripciones reales con Google Sheets.
+       Seguí README-SUSCRIPCION.md y pegá acá la URL de tu Apps Script
+       (la que termina en /exec). Mientras quede vacía, el formulario
+       simula el envío y guarda el mail en localStorage del navegador.
+       ============================================================ */
+    var WAITLIST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzowoPk4O-h99EwYMiX-5PXYMgj4CN5dPDzdyWlEB3gB3T4AKPMfAXdm8EVm2RpikN3eg/exec';
+
+    /* ---------- Menú mobile ---------- */
+    var menuBtn = document.getElementById('menu-btn');
+    var menu = document.getElementById('mobile-menu');
+    menuBtn.addEventListener('click', function () {
+      var open = menu.classList.toggle('hidden') === false;
+      menuBtn.setAttribute('aria-expanded', String(open));
+    });
+    menu.addEventListener('click', function (e) {
+      if (e.target.closest('a')) { menu.classList.add('hidden'); menuBtn.setAttribute('aria-expanded', 'false'); }
+    });
+
+    /* ---------- Scroll reveal ---------- */
+    var reveals = document.querySelectorAll('.reveal');
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (en) {
+          if (en.isIntersecting) { en.target.classList.add('is-visible'); io.unobserve(en.target); }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+      reveals.forEach(function (el) { io.observe(el); });
+    } else {
+      reveals.forEach(function (el) { el.classList.add('is-visible'); });
+    }
+    /* Los paneles ocultos se revelan al activarse (ver tabs) */
+
+    /* ---------- Tabs (App Móvil / Portal Web) ---------- */
+    var tabs = [document.getElementById('tab-app'), document.getElementById('tab-web')];
+    var panels = [document.getElementById('panel-app'), document.getElementById('panel-web')];
+    var pill = document.getElementById('tab-pill');
+
+    function movePill() {
+      var active = tabs.filter(function (t) { return t.getAttribute('aria-selected') === 'true'; })[0];
+      pill.style.width = active.offsetWidth + 'px';
+      pill.style.transform = 'translateX(' + (active.offsetLeft - 4) + 'px)';
+    }
+    function selectTab(i, focus) {
+      tabs.forEach(function (t, k) {
+        var on = k === i;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        panels[k].hidden = !on;
+      });
+      movePill();
+      // re-lanzamos la entrada suave de lo que acaba de aparecer
+      panels[i].querySelectorAll('.reveal').forEach(function (el) {
+        el.classList.remove('is-visible'); void el.offsetWidth; el.classList.add('is-visible');
+      });
+      if (focus) tabs[i].focus();
+    }
+    tabs.forEach(function (t, i) {
+      t.addEventListener('click', function () { selectTab(i); });
+      t.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); selectTab((i + 1) % 2, true); }
+      });
+    });
+    window.addEventListener('resize', movePill);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(movePill);
+    window.addEventListener('load', movePill);
+    movePill();
+
+    /* ---------- Formularios de suscripción ---------- */
+    var tpl = document.getElementById('signup-tpl');
+    var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    var SUCCESS_SUB = {
+      explorador: 'Te avisamos por mail apenas puedas descargar la app y empezar a ganarte salidas.',
+      dueno: 'Te avisamos por mail apenas se habilite el portal web. Con el acceso anticipado publicás tu local gratis.'
+    };
+
+    document.querySelectorAll('[data-signup]').forEach(function (mount, idx) {
+      var frag = tpl.content.cloneNode(true);
+      var form = frag.querySelector('form');
+      var ok = frag.querySelector('[data-success]');
+      var err = frag.querySelector('[data-error]');
+      var input = frag.querySelector('input[type="email"]');
+      var btn = frag.querySelector('button[type="submit"]');
+      var label = frag.querySelector('[data-email-label]');
+
+      // ids/names únicos por instancia (hay un formulario en el Hero y otro en el cierre)
+      var uid = 'signup-' + idx;
+      input.id = uid + '-email'; label.setAttribute('for', input.id);
+      frag.querySelectorAll('input[type="radio"]').forEach(function (r) { r.name = 'role-' + uid; });
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var email = input.value.trim();
+        var role = form.querySelector('input[type="radio"]:checked').value;
+        if (!EMAIL_RE.test(email)) {
+          err.textContent = 'Revisá el mail: tiene que ser algo como tu@email.com';
+          err.classList.remove('hidden'); input.setAttribute('aria-invalid', 'true'); input.focus();
+          return;
+        }
+        err.classList.add('hidden'); input.removeAttribute('aria-invalid');
+        btn.disabled = true; btn.classList.add('opacity-70');
+
+        var done = function () {
+          form.classList.add('hidden');
+          ok.querySelector('[data-success-sub]').textContent = SUCCESS_SUB[role];
+          ok.classList.remove('hidden');
+        };
+
+        if (WAITLIST_ENDPOINT) {
+          // text/plain evita el preflight CORS, que Apps Script no soporta.
+          // El script de Google parsea el body igual (ver apps-script-codigo.js).
+          fetch(WAITLIST_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ email: email, role: role })
+          }).then(function (r) { if (!r.ok) throw new Error(); done(); })
+            .catch(function () {
+              btn.disabled = false; btn.classList.remove('opacity-70');
+              err.textContent = 'No pudimos guardar tu mail. Probá de nuevo en un rato.';
+              err.classList.remove('hidden');
+            });
+        } else {
+          try {
+            var list = JSON.parse(localStorage.getItem('kiago_waitlist') || '[]');
+            list.push({ email: email, role: role, at: new Date().toISOString() });
+            localStorage.setItem('kiago_waitlist', JSON.stringify(list));
+          } catch (_) { /* localStorage puede no estar disponible */ }
+          done();
+        }
+      });
+
+      mount.appendChild(frag);
+    });
+
+    /* ---------- Botón de contacto (copia el email de soporte) ---------- */
+    var CONTACT_EMAIL = 'gabrielomarrolon.c@gmail.com';
+    var contactBtn = document.getElementById('contact-btn');
+    var contactToast = document.getElementById('contact-toast');
+    var toastTimer = null;
+
+    function copyText(text) {
+      // Clipboard API requiere contexto seguro; con fallback para el resto
+      if (navigator.clipboard && window.isSecureContext) {
+        return navigator.clipboard.writeText(text);
+      }
+      return new Promise(function (resolve, reject) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try {
+          if (document.execCommand('copy')) { resolve(); } else { reject(new Error('copy failed')); }
+        } catch (err) { reject(err); }
+        document.body.removeChild(ta);
+      });
+    }
+
+    function showContactToast() {
+      contactToast.classList.remove('opacity-0', 'translate-y-2');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () {
+        contactToast.classList.add('opacity-0', 'translate-y-2');
+      }, 3000);
+    }
+
+    contactBtn.addEventListener('click', function () {
+      copyText(CONTACT_EMAIL)
+        .then(showContactToast)
+        .catch(function () {
+          // Si el navegador bloquea el portapapeles, abrimos el cliente de correo
+          window.location.href = 'mailto:' + CONTACT_EMAIL;
+        });
+    });
+
+    /* ---------- Lightbox ---------- */
+    var lb = document.getElementById('lightbox');
+    var lbImg = document.getElementById('lb-img');
+    var lbCap = document.getElementById('lb-caption');
+    var lbCount = document.getElementById('lb-count');
+    var lbPrev = document.getElementById('lb-prev');
+    var lbNext = document.getElementById('lb-next');
+    var group = [], current = 0, lastFocus = null;
+
+    function render() {
+      var btn = group[current];
+      var src = btn.querySelector('img');
+      lbImg.src = src.currentSrc || src.src;
+      lbImg.alt = src.alt;
+      lbCap.textContent = btn.dataset.caption || '';
+      var multi = group.length > 1;
+      lbCount.textContent = multi ? (current + 1) + ' / ' + group.length : '';
+      lbPrev.classList.toggle('hidden', !multi);
+      lbNext.classList.toggle('hidden', !multi);
+    }
+    function openLb(btn) {
+      var g = btn.dataset.lb;
+      group = Array.prototype.slice.call(document.querySelectorAll('[data-lb="' + g + '"]'));
+      current = group.indexOf(btn);
+      lastFocus = btn;
+      render();
+      lb.classList.remove('pointer-events-none', 'opacity-0');
+      lb.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      document.getElementById('lb-close').focus();
+    }
+    function closeLb() {
+      lb.classList.add('pointer-events-none', 'opacity-0');
+      lb.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      if (lastFocus) lastFocus.focus();
+    }
+    function step(d) { if (group.length < 2) return; current = (current + d + group.length) % group.length; render(); }
+    function isOpen() { return lb.getAttribute('aria-hidden') === 'false'; }
+
+    document.querySelectorAll('[data-lb]').forEach(function (b) {
+      b.addEventListener('click', function () { openLb(b); });
+    });
+    lbPrev.addEventListener('click', function (e) { e.stopPropagation(); step(-1); });
+    lbNext.addEventListener('click', function (e) { e.stopPropagation(); step(1); });
+    document.getElementById('lb-close').addEventListener('click', closeLb);
+    // clic afuera de la imagen = cerrar
+    lb.addEventListener('click', function (e) { if (e.target === lb || e.target.hasAttribute('data-lb-stage')) closeLb(); });
+    document.addEventListener('keydown', function (e) {
+      if (!isOpen()) return;
+      if (e.key === 'Escape') closeLb();
+      else if (e.key === 'ArrowLeft') step(-1);
+      else if (e.key === 'ArrowRight') step(1);
+    });
+    // swipe en mobile
+    var tx = null;
+    lb.addEventListener('touchstart', function (e) { tx = e.touches[0].clientX; }, { passive: true });
+    lb.addEventListener('touchend', function (e) {
+      if (tx === null) return;
+      var dx = e.changedTouches[0].clientX - tx; tx = null;
+      if (Math.abs(dx) > 50) step(dx < 0 ? 1 : -1);
+    });
+  })();
+  </script>
+</body>
+</html>
